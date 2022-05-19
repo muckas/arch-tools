@@ -1,0 +1,52 @@
+#!/bin/bash
+temp_file=/tmp/vm-control
+usb_xml=/tmp/vm-usb.xml
+script_title="VM control"
+menu_actions="Connect USB\nDisconnect USB\nBoot\nKill\n"
+exclude='^$\|server'
+
+make_usb_xml () {
+	echo "<hostdev mode='subsystem' type='usb' managed='no'>
+<source>
+<address bus='$1' device='$2'/>
+</source>
+</hostdev>" > $usb_xml
+}
+
+# Handling actions
+action=$(printf "$menu_actions" | dmenu -l 10 -p "$script_title")
+case $action in
+	"Boot")
+		vm_name=$(sudo virsh list --name --inactive | grep -v $exclude | dmenu -l 10 -p "$script_title: Boot")
+		sudo virsh start $vm_name > $temp_file 2>&1
+		notify-send "$script_title" "$(cat $temp_file)"
+		;;
+	"Kill")
+		vm_name=$(sudo virsh list --name --state-running | grep -v $exclude | dmenu -l 10 -p "$script_title: Kill")
+		sudo virsh destroy $vm_name > $temp_file 2>&1
+		notify-send "$script_title" "$(cat $temp_file)"
+		;;
+	"Connect USB")
+		usb_device=$(lsusb | grep -v 'hub\|Hub' | dmenu -l 20 -p "$script_title: Connect USB")
+		if [ -n "$usb_device" ]
+		then
+			bus=$(echo $usb_device | awk '{print $2}')
+			device=$(echo $usb_device | awk -F '[: ]' '{print $4}')
+			make_usb_xml $bus $device
+			vm_name=$(sudo virsh list --name --state-running | grep -v $exclude | dmenu -l 10 -p "$script_title: Connect to")
+			sudo virsh attach-device $vm_name $usb_xml > $temp_file 2>&1
+			notify-send "$script_title" "$(cat $temp_file)"
+		fi
+		;;
+	"Disconnect USB")
+		usb_device=$(lsusb | grep -v 'hub\|Hub' | dmenu -l 20 -p "$script_title: Disconnect USB")
+		if [ -n "$usb_device" ]
+		then
+			bus=$(echo $usb_device | awk '{print $2}')
+			device=$(echo $usb_device | awk -F '[: ]' '{print $4}')
+			make_usb_xml $bus $device
+			vm_name=$(sudo virsh list --name --state-running | grep -v $exclude | dmenu -l 10 -p "$script_title: Disconnect from")
+			sudo virsh detach-device $vm_name $usb_xml > $temp_file 2>&1
+			notify-send "$script_title" "$(cat $temp_file)"
+		fi
+esac
