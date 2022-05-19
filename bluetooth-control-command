@@ -1,0 +1,15 @@
+#!/usr/bin/expect -f
+
+set prompt "#"
+set controller [lindex $argv 0]
+set command [lindex $argv 1]
+set expecting [lindex $argv 2]
+
+spawn bluetoothctl
+expect -re $prompt
+send "select $controller\r"
+expect -re $controller
+send "$command\r"
+expect -re "$expecting"
+send -- "exit\r"
+expect eof
