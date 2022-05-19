@@ -1,0 +1,4 @@
+#!/bin/sh
+program_file="$HOME/.config/frequent-programs"
+program_name=$(cat "$program_file" | dmenu -l 10 -p "Frequent programs")
+$program_name
