@@ -2,7 +2,7 @@
 temp_file=/tmp/vm-control
 usb_xml=/tmp/vm-usb.xml
 script_title="VM control"
-menu_actions="Connect USB\nDisconnect USB\nBoot\nKill\n"
+menu_actions="Connect USB\nDisconnect USB\nBoot\nKill\nCPU governor"
 exclude='^$\|server'
 
 make_usb_xml () {
@@ -48,5 +48,15 @@ case $action in
 			vm_name=$(sudo virsh list --name --state-running | grep -v $exclude | dmenu -l 10 -p "$script_title: Disconnect from")
 			sudo virsh detach-device $vm_name $usb_xml > $temp_file 2>&1
 			notify-send "$script_title" "$(cat $temp_file)"
+		fi
+		;;
+	"CPU governor")
+		governors="performance\npowersave\nuserspace\nondemand\nconservative\nschedutil"
+		current_covernor=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor)
+		new_governor=$(printf "$governors" | dmenu -l 10 -p "Current CPU governor: $current_covernor")
+		if [ -n "$new_governor" ]
+		then
+			current_covernor=$(sudo cpu-set-governor $new_governor)
+			notify-send "$script_title" "CPU governor set to '$current_covernor'"
 		fi
 esac
