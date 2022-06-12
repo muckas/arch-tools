@@ -1,0 +1,6 @@
+#!/usr/bin/env python
+import i3ipc
+
+i3 = i3ipc.Connection()
+for workspace in i3.get_workspaces():
+  print(f'{workspace.name} {workspace.output}')

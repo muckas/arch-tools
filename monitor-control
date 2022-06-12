@@ -1,0 +1,31 @@
+#!/bin/bash
+workspaces=~/.config/i3/worspaces
+layout_path=~/.screenlayout/
+script_title="Monitor control"
+menu_actions="Change screen layout\nSave i3 workspaces"
+
+move_workspace() {
+	i3-msg workspace $1
+	i3-msg move workspace to output $2
+}
+
+restore_workspaces() {
+while read line
+do
+	workspace=$(echo "$line" | awk '{print $1}')
+	output=$(echo "$line" | awk '{print $2}')
+	move_workspace $workspace $output
+done < $workspaces
+}
+
+# Handling actions
+action=$(printf "$menu_actions" | dmenu -l 10 -p "$script_title")
+case $action in
+	"Change screen layout")
+		layout=$(ls $layout_path | dmenu -l 10 -p "$script_title")
+		sh $layout_path$layout
+		restore_workspaces
+		;;
+	"Save i3 workspaces")
+		workspace-output > $workspaces
+esac
