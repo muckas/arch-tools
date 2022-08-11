@@ -49,12 +49,12 @@ case $action in
 		send_response Changing
 		;;
 	"Connect")
-		chosen_device_id=$(bluetoothctl paired-devices | dmenu -l 10 -p "Device to connect" | awk '{print $2}')
+		chosen_device_id=$(bluetoothctl devices | dmenu -l 10 -p "Device to connect" | awk '{print $2}')
 		bluetooth-control-command $controller "connect $chosen_device_id" "uccessful" > $temp_file
 		send_response "uccessful"
 		;;
 	"Disconnect")
-		chosen_device_id=$(bluetoothctl paired-devices | dmenu -l 10 -p "Device to connect" | awk '{print $2}')
+		chosen_device_id=$(bluetoothctl devices | dmenu -l 10 -p "Device to connect" | awk '{print $2}')
 		bluetooth-control-command $controller "disconnect $chosen_device_id" "uccessful" > $temp_file
 		send_response "uccessful"
 esac
