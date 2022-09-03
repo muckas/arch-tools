@@ -3,7 +3,7 @@ temp_file=/tmp/vm-control
 usb_xml=/tmp/vm-usb.xml
 script_title="VM control"
 menu_actions="Boot\nKill\nCPU governor\nConnect USB by id\nDisconnect USB by id\nConnect USB by port\nDisconnect USB by port"
-exclude='^$\|server'
+exclude='^$'
 
 make_usb_xml_by_port () {
 	echo "<hostdev mode='subsystem' type='usb' managed='no'>
