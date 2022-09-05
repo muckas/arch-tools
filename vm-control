@@ -41,8 +41,12 @@ case $action in
 		;;
 	"Kill")
 		vm_name=$(sudo virsh list --name --state-running | grep -v $exclude | dmenu -l 10 -p "$script_title: Kill")
-		sudo virsh destroy $vm_name > $temp_file 2>&1
-		notify-send "$script_title" "$(cat $temp_file)"
+		kill_prompt=$(printf "Not sure\nNo\nYes" | dmenu -nb darkred -sb red -l 10 -p "$script_title: Kill $vm_name?")
+		if [ "$kill_prompt" == "Yes" ];
+		then
+			sudo virsh destroy $vm_name > $temp_file 2>&1
+			notify-send "$script_title" "$(cat $temp_file)"
+		fi
 		;;
 	"Connect USB by id")
 		usb_device=$(lsusb | grep -v 'hub\|Hub' | dmenu -l 20 -p "$script_title: Connect USB")
