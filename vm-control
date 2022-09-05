@@ -4,6 +4,7 @@ usb_xml=/tmp/vm-usb.xml
 script_title="VM control"
 menu_actions="Boot\nKill\nCPU governor\nConnect USB by id\nDisconnect USB by id\nConnect USB by port\nDisconnect USB by port"
 exclude='^$'
+menu_colors=""
 
 make_usb_xml_by_port () {
 	echo "<hostdev mode='subsystem' type='usb' managed='no'>
@@ -22,8 +23,16 @@ make_usb_xml_by_id() {
 </hostdev>" > $usb_xml
 }
 
+#pci-stub switch
+test -f /etc/modprobe.d/vfio.conf && menu_actions="${menu_actions}\nDisable GPU Passthrough"
+if test -f /etc/modprobe.d/disabled-vfio.conf
+then
+	menu_actions="GPU PASSTHROUG DISABLED\n${menu_actions}\nEnable GPU Passthrough"
+	menu_colors="-nb darkred -sb red"
+fi
+
 # Handling actions
-action=$(printf "$menu_actions" | dmenu -l 10 -p "$script_title")
+action=$(printf "$menu_actions" | dmenu $menu_colors -l 10 -p "$script_title")
 case $action in
 	"Boot")
 		vm_name=$(sudo virsh list --name --inactive | grep -v $exclude | dmenu -l 10 -p "$script_title: Boot")
@@ -92,4 +101,20 @@ case $action in
 			current_covernor=$(sudo cpu-set-governor $new_governor)
 			notify-send "$script_title" "CPU governor set to '$current_covernor'"
 		fi
+		;;
+	"Disable GPU Passthrough")
+		sudo mv /etc/modprobe.d/vfio.conf /etc/modprobe.d/disabled-vfio.conf
+		sudo mkinitcpio -p linux
+		sudo cp -f /etc/default/no-pci-stub-grub /etc/default/grub
+		sudo grub-mkconfig -o /boot/grub/grub.cfg
+		cp -f $HOME/.screenlayout/double-gpu.sh $HOME/.screenlayout/default.sh
+		notify-send "$script_title" "GPU passthrough disabled"
+		;;
+	"Enable GPU Passthrough")
+		sudo mv /etc/modprobe.d/disabled-vfio.conf /etc/modprobe.d/vfio.conf
+		sudo mkinitcpio -p linux
+		sudo cp -f /etc/default/pci-stub-grub /etc/default/grub
+		sudo grub-mkconfig -o /boot/grub/grub.cfg
+		cp -f $HOME/.screenlayout/single-gpu.sh $HOME/.screenlayout/default.sh
+		notify-send "$script_title" "GPU passthrough enabled"
 esac
