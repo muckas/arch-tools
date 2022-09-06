@@ -24,11 +24,17 @@ make_usb_xml_by_id() {
 }
 
 #pci-stub switch
-test -f /etc/modprobe.d/vfio.conf && menu_actions="${menu_actions}\nDisable GPU Passthrough"
-if test -f /etc/modprobe.d/disabled-vfio.conf
-then
-	menu_actions="GPU PASSTHROUG DISABLED\n${menu_actions}\nEnable GPU Passthrough"
-	menu_colors="-nb darkred -sb red"
+configs_exist=1
+test ! -f /etc/default/pci-stub-grub && configs_exist=0
+test ! -f /etc/default/no-pci-stub-grub && configs_exist=0
+test ! -f $HOME/.screenlayout/single-gpu.sh && configs_exist=0
+test ! -f $HOME/.screenlayout/double-gpu.sh && configs_exist=0
+if [ $configs_exist == 1 ]; then
+	test -f /etc/modprobe.d/vfio.conf && menu_actions="${menu_actions}\nDisable GPU Passthrough"
+	if test -f /etc/modprobe.d/disabled-vfio.conf; then
+		menu_actions="GPU PASSTHROUG DISABLED\n${menu_actions}\nEnable GPU Passthrough"
+		menu_colors="-nb darkred -sb red"
+	fi
 fi
 
 # Handling actions
