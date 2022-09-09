@@ -1,6 +1,7 @@
 #!/bin/bash
 temp_file=/tmp/vm-control
 usb_xml=/tmp/vm-usb.xml
+config_dir=~/.config/vm-control
 script_title="VM control"
 menu_actions="Boot\nKill\nCPU governor\nConnect USB by id\nDisconnect USB by id\nConnect USB by port\nDisconnect USB by port"
 exclude='^$'
@@ -23,15 +24,22 @@ make_usb_xml_by_id() {
 </hostdev>" > $usb_xml
 }
 
-#pci-stub switch
+# create config directory
+mkdir -p "$config_dir"
+
+# pci-stub switch
+if [[ ! -f ${config_dir}/passthrough-enabled && ! -f ${config_dir}/passthrough-disabled ]]
+then
+	touch ${config_dir}/passthrough-enabled
+fi
 configs_exist=1
 test ! -f /etc/default/pci-stub-grub && configs_exist=0
 test ! -f /etc/default/no-pci-stub-grub && configs_exist=0
 test ! -f $HOME/.screenlayout/single-gpu.sh && configs_exist=0
 test ! -f $HOME/.screenlayout/double-gpu.sh && configs_exist=0
 if [ $configs_exist == 1 ]; then
-	test -f /etc/modprobe.d/vfio.conf && menu_actions="${menu_actions}\nDisable GPU Passthrough"
-	if test -f /etc/modprobe.d/disabled-vfio.conf; then
+	test -f ${config_dir}/passthrough-enabled && menu_actions="${menu_actions}\nDisable GPU Passthrough"
+	if test -f ${config_dir}/passthrough-disabled;then
 		menu_actions="GPU PASSTHROUG DISABLED\n${menu_actions}\nEnable GPU Passthrough"
 		menu_colors="-nb darkred -sb red"
 	fi
@@ -47,11 +55,14 @@ case $action in
 		;;
 	"Kill")
 		vm_name=$(sudo virsh list --name --state-running | grep -v $exclude | dmenu -l 10 -p "$script_title: Kill")
-		kill_prompt=$(printf "Not sure\nNo\nYes" | dmenu -nb darkred -sb red -l 10 -p "$script_title: Kill $vm_name?")
-		if [ "$kill_prompt" == "Yes" ];
+		if [ -n "$vm_name" ]
 		then
-			sudo virsh destroy $vm_name > $temp_file 2>&1
-			notify-send "$script_title" "$(cat $temp_file)"
+			kill_prompt=$(printf "Not sure\nNo\nYes" | dmenu -nb darkred -sb red -l 10 -p "$script_title: Kill $vm_name?")
+			if [ "$kill_prompt" == "Yes" ];
+			then
+				sudo virsh destroy $vm_name > $temp_file 2>&1
+				notify-send "$script_title" "$(cat $temp_file)"
+			fi
 		fi
 		;;
 	"Connect USB by id")
@@ -113,18 +124,20 @@ case $action in
 		fi
 		;;
 	"Disable GPU Passthrough")
-		sudo mv /etc/modprobe.d/vfio.conf /etc/modprobe.d/disabled-vfio.conf
-		sudo mkinitcpio -p linux
+		# sudo mv /etc/modprobe.d/vfio.conf /etc/modprobe.d/disabled-vfio.conf
+		# sudo mkinitcpio -p linux
 		sudo cp -f /etc/default/no-pci-stub-grub /etc/default/grub
 		sudo grub-mkconfig -o /boot/grub/grub.cfg
 		cp -f $HOME/.screenlayout/double-gpu.sh $HOME/.screenlayout/default.sh
+		mv ${config_dir}/passthrough-enabled ${config_dir}/passthrough-disabled
 		notify-send "$script_title" "GPU passthrough disabled"
 		;;
 	"Enable GPU Passthrough")
-		sudo mv /etc/modprobe.d/disabled-vfio.conf /etc/modprobe.d/vfio.conf
-		sudo mkinitcpio -p linux
+		# sudo mv /etc/modprobe.d/disabled-vfio.conf /etc/modprobe.d/vfio.conf
+		# sudo mkinitcpio -p linux
 		sudo cp -f /etc/default/pci-stub-grub /etc/default/grub
 		sudo grub-mkconfig -o /boot/grub/grub.cfg
 		cp -f $HOME/.screenlayout/single-gpu.sh $HOME/.screenlayout/default.sh
+		mv ${config_dir}/passthrough-disabled ${config_dir}/passthrough-enabled
 		notify-send "$script_title" "GPU passthrough enabled"
 esac
