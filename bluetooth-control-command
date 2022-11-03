@@ -10,6 +10,7 @@ expect -re $prompt
 send "select $controller\r"
 expect -re $controller
 send "$command\r"
+sleep 0.05
 expect -re "$expecting"
 send -- "exit\r"
 expect eof
