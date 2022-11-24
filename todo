@@ -1,0 +1,23 @@
+#!/bin/bash
+configdir="$HOME/.config/todo/"
+todofile="$HOME/.cache/todo.txt"
+clean_bg="$configdir/bg.png"
+edited_bg="$configdir/edited-bg.png"
+text_color="silver"
+text_size=150
+mkdir $configdir 2> /dev/null
+test ! -f $wallpaper && cp $HOME/.config/wall.png $clean_bg
+touch $todofile
+vim $todofile
+first_line=$(head -n 1 "$todofile")
+if [ "$first_line" == "HIDE" ]; then
+		setbg $clean_bg
+else
+	taskcount=$(wc -l $todofile | awk '{print $1}')
+	if [ $taskcount != 0 ]; then
+		convert $clean_bg -fill $text_color -gravity Center -pointsize $text_size -annotate 0 $taskcount $edited_bg
+		setbg $edited_bg
+	else
+		setbg $clean_bg
+	fi
+fi
