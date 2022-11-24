@@ -7,31 +7,40 @@ edited_bg="$configdir/edited-bg.png"
 text_color="silver"
 text_size=150
 
-mkdir $configdir 2> /dev/null
-test ! -f $wallpaper && cp $HOME/.config/wall.png $clean_bg
-touch $todofile
-
-vim $todofile
-
 display_tasks() {
 		taskcount=$(wc -l $todofile | awk '{print $1}')
 		if [ $taskcount != 0 ]; then
 			convert $clean_bg -fill $text_color -gravity Center -pointsize $text_size -annotate 0 $taskcount $edited_bg
-			setbg $edited_bg
+			xwallpaper --zoom $edited_bg
 		else
-			setbg $clean_bg
+			xwallpaper --zoom $clean_bg
 		fi
 }
+
+load_from_calendar() {
+	wget -O $calendarfile $CALENDAR_URL
+	todo-ical $calendarfile > $todofile
+	display_tasks
+}
+
+mkdir $configdir 2> /dev/null
+test ! -f $wallpaper && cp $HOME/.config/wall.png $clean_bg
+touch $todofile
+
+if [ $1 == 'load' ]; then
+	load_from_calendar
+	exit
+fi
+
+vim $todofile
 
 first_line=$(head -n 1 "$todofile")
 case $first_line in
 	"HIDE")
-		setbg $clean_bg
+		xwallpaper --zoom $clean_bg
 		;;
 	"LOAD")
-		wget -O $calendarfile $CALENDAR_URL
-		todo-ical $calendarfile > $todofile
-		display_tasks
+		load_from_calendar
 		;;
 	*)
 		display_tasks
