@@ -1,0 +1,19 @@
+#!/usr/bin/env python
+from icalendar import Calendar
+import recurring_ical_events
+import sys
+import datetime
+
+ical_file = sys.argv[1]
+with open(ical_file) as f:
+  ical = f.read()
+
+today = datetime.date.today()
+
+events = []
+for event in recurring_ical_events.of(Calendar.from_ical(ical)).at(today):
+  events.append(event)
+
+events = sorted(events, key=lambda t: t.get('dtstart').dt)
+for event in events:
+  print(event['summary'])
