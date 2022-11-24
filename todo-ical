@@ -3,17 +3,30 @@ from icalendar import Calendar
 import recurring_ical_events
 import sys
 import datetime
+import os
 
-ical_file = sys.argv[1]
-with open(ical_file) as f:
-  ical = f.read()
+ical_dir = sys.argv[1]
+icals = os.listdir(ical_dir)
 
 today = datetime.date.today()
 
 events = []
-for event in recurring_ical_events.of(Calendar.from_ical(ical)).at(today):
-  events.append(event)
+for ical_file in icals:
+  with open(os.path.join(ical_dir, ical_file)) as f:
+    ical = f.read()
+  for event in recurring_ical_events.of(Calendar.from_ical(ical)).at(today):
+    events.append(event)
 
-events = sorted(events, key=lambda t: t.get('dtstart').dt)
+date_events = []
+datetime_events = []
 for event in events:
+  if type(event.get('dtstart').dt) is datetime.date:
+    date_events.append(event)
+  else:
+    datetime_events.append(event)
+
+datetime_events = sorted(datetime_events, key=lambda t: t.get('dtstart').dt)
+for event in date_events:
+  print(event['summary'])
+for event in datetime_events:
   print(event['summary'])

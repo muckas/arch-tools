@@ -1,7 +1,7 @@
 #!/bin/bash
-configdir="$HOME/.config/todo/"
-todofile="$HOME/.cache/todo.txt"
-calendarfile="$HOME/.cache/todo-ical.ics"
+configdir="$HOME/.config/todo"
+cachedir="$HOME/.cache/todo"
+todofile="$cachedir/todo.txt"
 clean_bg="$configdir/bg.png"
 edited_bg="$configdir/edited-bg.png"
 text_color="silver"
@@ -18,16 +18,21 @@ display_tasks() {
 }
 
 load_from_calendar() {
-	wget -O $calendarfile $CALENDAR_URL
-	todo-ical $calendarfile > $todofile
+	rm -f $cachedir/ical/*
+	for url in $CALENDAR_URLS; do
+		wget -P $cachedir/ical $url
+	done
+	todo-ical $cachedir/ical > $todofile
 	display_tasks
 }
 
 mkdir $configdir 2> /dev/null
+mkdir $cachedir 2> /dev/null
+mkdir $cachedir/ical 2> /dev/null
 test ! -f $wallpaper && cp $HOME/.config/wall.png $clean_bg
 touch $todofile
 
-if [ $1 == 'load' ]; then
+if [ "$1" == 'load' ]; then
 	load_from_calendar
 	exit
 fi
