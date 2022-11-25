@@ -22,7 +22,7 @@ load_from_calendar() {
 	for url in $CALENDAR_URLS; do
 		wget -P $cachedir/ical $url
 	done
-	todo-ical $cachedir/ical > $todofile
+	todo-ical $cachedir/ical >> $todofile
 	display_tasks
 }
 
