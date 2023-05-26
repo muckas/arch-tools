@@ -32,10 +32,20 @@ mkdir $cachedir/ical 2> /dev/null
 test ! -f $wallpaper && cp $HOME/.config/wall.png $clean_bg
 touch $todofile
 
-if [ "$1" == 'load' ]; then
-	load_from_calendar
-	exit
-fi
+case $1 in
+	"hide")
+		xwallpaper --zoom $clean_bg
+		exit
+		;;
+	"load")
+		load_from_calendar
+		exit
+		;;
+	"show")
+		display_tasks
+		exit
+		;;
+esac
 
 vim $todofile
 
