@@ -7,7 +7,25 @@ menu_actions="Boot\nKill\nCPU governor\nConnect USB by id\nDisconnect USB by id\
 exclude='^$'
 menu_colors=""
 
-make_usb_xml_by_port () {
+if [ $1 = "--cli" ]
+then
+	menu_cmd="fzf --layout reverse --info hidden --prompt "
+	mode="cli"
+else
+	menu_cmd="dmenu -l 20 -p "
+	mode="gui"
+fi
+
+notify() {
+	if [ $mode = "cli" ]
+	then
+		echo "$2"
+	else
+		notify-send "$1" "$2"
+	fi
+}
+
+make_usb_xml_by_port() {
 	echo "<hostdev mode='subsystem' type='usb' managed='no'>
 <source>
 <address bus='$1' device='$2'/>
@@ -46,81 +64,91 @@ if [ $configs_exist == 1 ]; then
 fi
 
 # Handling actions
-action=$(printf "$menu_actions" | dmenu $menu_colors -l 10 -p "$script_title")
+if [ $1 = "--cli" ]
+then
+	action=$(printf "$menu_actions" | $menu_cmd "$script_title")
+else
+	action=$(printf "$menu_actions" | dmenu $menu_colors -l 10 -p "$script_title")
+fi
 case $action in
 	"Boot")
-		vm_name=$(sudo virsh list --name --inactive | grep -v $exclude | dmenu -l 10 -p "$script_title: Boot")
+		vm_name=$(sudo virsh list --name --inactive | grep -v $exclude | $menu_cmd "$script_title: Boot")
 		sudo virsh start $vm_name > $temp_file 2>&1
-		notify-send "$script_title" "$(cat $temp_file)"
+		notify "$script_title" "$(cat $temp_file)"
 		;;
 	"Kill")
-		vm_name=$(sudo virsh list --name --state-running | grep -v $exclude | dmenu -l 10 -p "$script_title: Kill")
+		vm_name=$(sudo virsh list --name --state-running | grep -v $exclude | $menu_cmd "$script_title: Kill")
 		if [ -n "$vm_name" ]
 		then
-			kill_prompt=$(printf "Not sure\nNo\nYes" | dmenu -nb darkred -sb red -l 10 -p "$script_title: Kill $vm_name?")
+			if [ $1 = "--cli" ]
+			then
+				kill_prompt=$(printf "Not sure\nNo\nYes" | $menu_cmd "$script_title: Kill $vm_name?")
+			else
+				kill_prompt=$(printf "Not sure\nNo\nYes" | dmenu -nb darkred -sb red -l 10 -p "$script_title: Kill $vm_name?")
+			fi
 			if [ "$kill_prompt" == "Yes" ];
 			then
 				sudo virsh destroy $vm_name > $temp_file 2>&1
-				notify-send "$script_title" "$(cat $temp_file)"
+				notify "$script_title" "$(cat $temp_file)"
 			fi
 		fi
 		;;
 	"Connect USB by id")
-		usb_device=$(lsusb | grep -v 'hub\|Hub' | dmenu -l 20 -p "$script_title: Connect USB")
+		usb_device=$(lsusb | grep -v 'hub\|Hub' | $menu_cmd "$script_title: Connect USB")
 		if [ -n "$usb_device" ]
 		then
 			vendor=$(echo $usb_device | awk '{print $6}' | awk -F ':' '{print $1}')
 			product=$(echo $usb_device | awk '{print $6}' | awk -F ':' '{print $2}')
 			make_usb_xml_by_id $vendor $product
-			vm_name=$(sudo virsh list --name --state-running | grep -v $exclude | dmenu -l 10 -p "$script_title: Connect to")
+			vm_name=$(sudo virsh list --name --state-running | grep -v $exclude | $menu_cmd "$script_title: Connect to")
 			sudo virsh attach-device $vm_name $usb_xml > $temp_file 2>&1
-			notify-send "$script_title" "$(cat $temp_file)"
+			notify "$script_title" "$(cat $temp_file)"
 		fi
 		;;
 	"Disconnect USB by id")
-		usb_device=$(lsusb | grep -v 'hub\|Hub' | dmenu -l 20 -p "$script_title: Connect USB")
+		usb_device=$(lsusb | grep -v 'hub\|Hub' | $menu_cmd "$script_title: Connect USB")
 		if [ -n "$usb_device" ]
 		then
 			vendor=$(echo $usb_device | awk '{print $6}' | awk -F ':' '{print $1}')
 			product=$(echo $usb_device | awk '{print $6}' | awk -F ':' '{print $2}')
 			make_usb_xml_by_id $vendor $product
-			vm_name=$(sudo virsh list --name --state-running | grep -v $exclude | dmenu -l 10 -p "$script_title: Connect to")
+			vm_name=$(sudo virsh list --name --state-running | grep -v $exclude | $menu_cmd "$script_title: Connect to")
 			sudo virsh detach-device $vm_name $usb_xml > $temp_file 2>&1
-			notify-send "$script_title" "$(cat $temp_file)"
+			notify "$script_title" "$(cat $temp_file)"
 		fi
 		;;
 	"Connect USB by port")
-		usb_device=$(lsusb | grep -v 'hub\|Hub' | dmenu -l 20 -p "$script_title: Connect USB")
+		usb_device=$(lsusb | grep -v 'hub\|Hub' | $menu_cmd "$script_title: Connect USB")
 		if [ -n "$usb_device" ]
 		then
 			bus=$(echo $usb_device | awk '{print $2}')
 			device=$(echo $usb_device | awk -F '[: ]' '{print $4}')
 			make_usb_xml_by_port $bus $device
-			vm_name=$(sudo virsh list --name --state-running | grep -v $exclude | dmenu -l 10 -p "$script_title: Connect to")
+			vm_name=$(sudo virsh list --name --state-running | grep -v $exclude | $menu_cmd "$script_title: Connect to")
 			sudo virsh attach-device $vm_name $usb_xml > $temp_file 2>&1
-			notify-send "$script_title" "$(cat $temp_file)"
+			notify "$script_title" "$(cat $temp_file)"
 		fi
 		;;
 	"Disconnect USB by port")
-		usb_device=$(lsusb | grep -v 'hub\|Hub' | dmenu -l 20 -p "$script_title: Disconnect USB")
+		usb_device=$(lsusb | grep -v 'hub\|Hub' | $menu_cmd "$script_title: Disconnect USB")
 		if [ -n "$usb_device" ]
 		then
 			bus=$(echo $usb_device | awk '{print $2}')
 			device=$(echo $usb_device | awk -F '[: ]' '{print $4}')
 			make_usb_xml_by_port $bus $device
-			vm_name=$(sudo virsh list --name --state-running | grep -v $exclude | dmenu -l 10 -p "$script_title: Disconnect from")
+			vm_name=$(sudo virsh list --name --state-running | grep -v $exclude | $menu_cmd "$script_title: Disconnect from")
 			sudo virsh detach-device $vm_name $usb_xml > $temp_file 2>&1
-			notify-send "$script_title" "$(cat $temp_file)"
+			notify "$script_title" "$(cat $temp_file)"
 		fi
 		;;
 	"CPU governor")
 		governors="performance\npowersave\nuserspace\nondemand\nconservative\nschedutil"
 		current_covernor=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor)
-		new_governor=$(printf "$governors" | dmenu -l 10 -p "Current CPU governor: $current_covernor")
+		new_governor=$(printf "$governors" | $menu_cmd "Current CPU governor: $current_covernor")
 		if [ -n "$new_governor" ]
 		then
 			current_covernor=$(sudo cpu-set-governor $new_governor)
-			notify-send "$script_title" "CPU governor set to '$current_covernor'"
+			notify "$script_title" "CPU governor set to '$current_covernor'"
 		fi
 		;;
 	"Disable GPU Passthrough")
@@ -130,7 +158,7 @@ case $action in
 		sudo grub-mkconfig -o /boot/grub/grub.cfg
 		cp -f $HOME/.screenlayout/double-gpu.sh $HOME/.screenlayout/default.sh
 		mv ${config_dir}/passthrough-enabled ${config_dir}/passthrough-disabled
-		notify-send "$script_title" "GPU passthrough disabled"
+		notify "$script_title" "GPU passthrough disabled"
 		;;
 	"Enable GPU Passthrough")
 		# sudo mv /etc/modprobe.d/disabled-vfio.conf /etc/modprobe.d/vfio.conf
@@ -139,5 +167,5 @@ case $action in
 		sudo grub-mkconfig -o /boot/grub/grub.cfg
 		cp -f $HOME/.screenlayout/single-gpu.sh $HOME/.screenlayout/default.sh
 		mv ${config_dir}/passthrough-disabled ${config_dir}/passthrough-enabled
-		notify-send "$script_title" "GPU passthrough enabled"
+		notify "$script_title" "GPU passthrough enabled"
 esac
