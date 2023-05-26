@@ -7,12 +7,19 @@ menu_actions="Connect\nDisconnect\nPower off"
 if [ $1 = "--cli" ]
 then
 	menu_cmd="fzf --layout reverse --info hidden --prompt "
+	mode="cli"
 else
 	menu_cmd="dmenu -l 10 -p "
+	mode="gui"
 fi
 
 send_response () {
-	notify-send "$script_title" "$(cat /tmp/bluetooth | sed 's/\x1B\[[0-9;]*[JKmsu]//g' | sed 's/\r/\n/g' | grep $1)"
+	if [ $mode = "cli" ]
+	then
+		echo "$(cat /tmp/bluetooth | sed 's/\x1B\[[0-9;]*[JKmsu]//g' | sed 's/\r/\n/g' | grep $1)"
+	else
+		notify-send "$script_title" "$(cat /tmp/bluetooth | sed 's/\x1B\[[0-9;]*[JKmsu]//g' | sed 's/\r/\n/g' | grep $1)"
+	fi
 }
 
 mkdir -p "$config_dir"
