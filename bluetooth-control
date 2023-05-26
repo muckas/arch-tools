@@ -4,6 +4,13 @@ temp_file=/tmp/bluetooth
 script_title="Bluetooth control"
 menu_actions="Connect\nDisconnect\nPower off"
 
+if [ $1 = "--cli" ]
+then
+	menu_cmd="fzf --layout reverse --info hidden --prompt "
+else
+	menu_cmd="dmenu -l 10 -p "
+fi
+
 send_response () {
 	notify-send "$script_title" "$(cat /tmp/bluetooth | sed 's/\x1B\[[0-9;]*[JKmsu]//g' | sed 's/\r/\n/g' | grep $1)"
 }
@@ -15,7 +22,7 @@ if test -f "$controller_file";
 then
 	controller=$(cat "$controller_file")
 else
-	controller=$(bluetoothctl list | dmenu -l 10 -p "Select bluetooth controller" | awk '{print $2}')
+	controller=$(bluetoothctl list | "Select bluetooth controller" | awk '{print $2}')
 	echo $controller > "$controller_file"
 fi
 
@@ -24,7 +31,12 @@ controller_status=$(bluetoothctl show $controller | awk '/Powered/ {print $2}')
 # Powering on controller
 if [ $controller_status = "no" ]
 then
-	response=$(echo -e "No\nYes" | dmenu -p "Enable bluetooth?")
+	if [ $1 = "--cli" ]
+	then
+		response=$(echo -e "No\nYes" | $menu_cmd "Enable bluetooth?")
+	else
+		response=$(echo -e "No\nYes" | dmenu -p "Enable bluetooth?")
+	fi
 	if [ $response = 'Yes' ]
 	then
 		bluetooth-control-command $controller "power on" "Changing power on" > $temp_file
@@ -38,7 +50,7 @@ then
 fi
 
 # Handling actions
-action=$(printf "$menu_actions" | dmenu -l 10 -p "Bluetooth control")
+action=$(printf "$menu_actions" | $menu_cmd "Bluetooth control")
 case $action in
 	"Power off")
 		for device in $(bluetoothctl devices | awk '{print $2}')
@@ -50,13 +62,13 @@ case $action in
 		;;
 	"Connect")
 		bluetooth-control-command $controller "devices" "#" > $temp_file
-		chosen_device_id=$(grep Device $temp_file | dmenu -l 10 -p "Device to connect" | awk '{print $2}')
+		chosen_device_id=$(grep Device $temp_file | $menu_cmd "Device to connect" | awk '{print $2}')
 		bluetooth-control-command $controller "connect $chosen_device_id" "uccessful" > $temp_file
 		send_response "uccessful"
 		;;
 	"Disconnect")
 		bluetooth-control-command $controller "devices" "#" > $temp_file
-		chosen_device_id=$(grep Device $temp_file | dmenu -l 10 -p "Device to disconnect" | awk '{print $2}')
+		chosen_device_id=$(grep Device $temp_file | $menu_cmd "Device to disconnect" | awk '{print $2}')
 		bluetooth-control-command $controller "disconnect $chosen_device_id" "uccessful" > $temp_file
 		send_response "uccessful"
 esac
